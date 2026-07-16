@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Run a Prediction — Cell Boundary</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;0,6..72,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#FBFAF8;
+    --ink:#1C1B2A;
+    --ink-soft:#5B596E;
+    --violet:#4A2E7A;
+    --violet-2:#8B5FBF;
+    --violet-tint:#EFE9F7;
+    --rose:#D9776B;
+    --teal:#2F6F62;
+    --teal-tint:#E4F1EC;
+    --coral:#C1543F;
+    --coral-tint:#FAEAE6;
+    --line: rgba(28,27,42,0.10);
+    --glass: rgba(255,255,255,0.62);
+    --glass-strong: rgba(255,255,255,0.82);
+    --radius: 16px;
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:'IBM Plex Sans', sans-serif; -webkit-font-smoothing:antialiased; position:relative;
+  }
+  body::before{
+    content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
+    background:
+      radial-gradient(circle at 10% 6%,  rgba(74,46,122,0.15), transparent 38%),
+      radial-gradient(circle at 92% 10%, rgba(217,119,107,0.12), transparent 42%),
+      radial-gradient(circle at 85% 90%, rgba(47,111,98,0.12), transparent 42%),
+      radial-gradient(circle at 10% 92%, rgba(193,84,63,0.10), transparent 38%),
+      repeating-radial-gradient(circle at 0 0, rgba(28,27,42,0.045) 0 1px, transparent 1px 26px),
+      var(--paper);
+  }
+  h1,h2{ font-family:'Newsreader', serif; font-weight:600; margin:0; letter-spacing:-0.01em; }
+  .mono{ font-family:'IBM Plex Mono', monospace; }
+  a{ color:inherit; text-decoration:none; }
+  :focus-visible{ outline:2px solid var(--violet); outline-offset:3px; }
+  .wrap{ max-width:1200px; margin:0 auto; padding:0 32px; }
+
+  nav.wrap{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:24px 32px; position:sticky; top:0; z-index:20;
+    backdrop-filter:blur(14px); background:rgba(251,250,248,0.72); border-bottom:1px solid var(--line);
+  }
+  .brand{ display:flex; align-items:center; gap:10px; font-family:'IBM Plex Mono',monospace; font-weight:500; font-size:15px; }
+  .back{ font-size:14px; color:var(--ink-soft); }
+  .back:hover{ color:var(--violet); }
+
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:0.14em;
+    text-transform:uppercase; color:var(--violet); display:inline-flex; align-items:center; gap:8px;
+  }
+  .eyebrow::before{ content:""; width:16px; height:1px; background:var(--violet); display:inline-block; }
+
+  main.wrap{ padding:40px 32px 90px; position:relative; }
+  .blob{ position:absolute; filter:blur(55px); opacity:.45; border-radius:50%; z-index:-1; animation:float 15s ease-in-out infinite; }
+  .blob.b1{ width:320px; height:320px; top:-40px; left:-100px; background:radial-gradient(circle, var(--violet-2), transparent 70%); }
+  .blob.b2{ width:280px; height:280px; bottom:0; right:-80px; background:radial-gradient(circle, var(--teal), transparent 70%); animation-delay:-7s; }
+  @keyframes float{ 0%,100%{ transform:translate(0,0) scale(1);} 50%{ transform:translate(18px,-20px) scale(1.05);} }
+  @media (prefers-reduced-motion:reduce){ .blob{ animation:none; } }
+
+  header.intro{ max-width:66ch; margin-bottom:44px; }
+  header.intro h1{ font-size:clamp(30px,3.8vw,44px); margin-top:14px; }
+  header.intro p{ color:var(--ink-soft); font-size:15.5px; line-height:1.65; margin-top:14px; }
+
+  .grid{ display:grid; grid-template-columns:1.1fr 0.9fr; gap:44px; align-items:start; position:relative; z-index:1; }
+
+  form{ display:flex; flex-direction:column; gap:20px; }
+  .field{
+    border:1px solid var(--line); border-radius:14px; padding:18px 20px;
+    background:var(--glass); backdrop-filter:blur(12px);
+    box-shadow:0 10px 26px rgba(28,27,42,0.05);
+    transition:box-shadow .2s ease, transform .2s ease;
+  }
+  .field:hover{ box-shadow:0 14px 34px rgba(28,27,42,0.08); transform:translateY(-1px); }
+  .field-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; gap:12px; }
+  .field-head .fname-row{ display:flex; align-items:center; gap:10px; }
+  .field-icon{ width:20px; height:20px; color:var(--violet); flex-shrink:0; }
+  .field-head label{ font-size:14.5px; font-weight:500; font-family:'IBM Plex Mono',monospace; }
+  .field-head .readout{
+    font-size:14px; color:#fff; min-width:64px; text-align:center;
+    background:linear-gradient(135deg, var(--violet), var(--violet-2));
+    padding:4px 10px; border-radius:100px; font-family:'IBM Plex Mono',monospace;
+  }
+  .field-sub{ font-size:12.5px; color:var(--ink-soft); margin:8px 0 12px; }
+
+  .slider-track{ position:relative; }
+  input[type=range]{
+    -webkit-appearance:none; width:100%; height:6px; border-radius:3px;
+    background:var(--line); outline:none;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none; width:18px; height:18px; border-radius:50%;
+    background:linear-gradient(135deg, var(--violet), var(--violet-2)); cursor:pointer;
+    border:3px solid #fff; box-shadow:0 3px 10px rgba(74,46,122,0.5);
+  }
+  input[type=range]::-moz-range-thumb{
+    width:18px; height:18px; border-radius:50%; background:linear-gradient(135deg, var(--violet), var(--violet-2));
+    cursor:pointer; border:3px solid #fff; box-shadow:0 3px 10px rgba(74,46,122,0.5);
+  }
+  .range-caps{ display:flex; justify-content:space-between; font-size:11px; color:var(--ink-soft); margin-top:8px; }
+
+  .btn{
+    font-family:'IBM Plex Sans', sans-serif; font-weight:500; font-size:15.5px;
+    padding:16px 26px; border-radius:100px; border:none; cursor:pointer;
+    background:linear-gradient(135deg, var(--violet), var(--violet-2)); color:#fff;
+    box-shadow:0 12px 30px rgba(74,46,122,0.35);
+    transition:transform .18s ease, box-shadow .18s ease; align-self:flex-start;
+  }
+  .btn:hover{ transform:translateY(-2px); box-shadow:0 16px 36px rgba(74,46,122,0.42); }
+
+  .visual-card{
+    border:1px solid rgba(255,255,255,0.7); border-radius:20px;
+    background:var(--glass); backdrop-filter:blur(16px);
+    box-shadow:0 24px 60px rgba(28,27,42,0.1);
+    padding:30px; position:sticky; top:100px;
+    display:flex; flex-direction:column; align-items:center; text-align:center;
+  }
+  .visual-head{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px; width:100%; }
+  .visual-head .mono{ font-size:11px; color:var(--ink-soft); }
+
+  .diagnosis-icon{
+    width:64px; height:64px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    margin:20px 0 18px; background:linear-gradient(135deg, var(--violet-tint), #fff);
+    border:1px solid var(--line); box-shadow:0 10px 24px rgba(74,46,122,0.12);
+  }
+  .diagnosis-icon svg{ width:30px; height:30px; color:var(--violet); }
+
+  .diagnosis-empty{ color:var(--ink-soft); font-size:14.5px; line-height:1.6; padding:6px 4px 4px; }
+
+  .diagnosis-value{
+    font-family:'IBM Plex Mono', monospace; font-size:30px; font-weight:500;
+    padding:10px 22px; border-radius:100px; margin-top:2px;
+  }
+  .diagnosis-value.benign{ color:var(--teal); background:var(--teal-tint); }
+  .diagnosis-value.malignant{ color:var(--coral); background:var(--coral-tint); }
+  .diagnosis-value.neutral{ color:var(--violet); background:var(--violet-tint); }
+
+  .diagnosis-caption{ font-size:13px; color:var(--ink-soft); margin-top:14px; line-height:1.6; }
+
+  .disclaimer-note{
+    font-size:12px; color:var(--ink-soft); margin-top:20px; line-height:1.55;
+    border-top:1px dashed var(--line); padding-top:16px; width:100%;
+  }
+
+  @media (max-width:900px){
+    .grid{ grid-template-columns:1fr; }
+    .visual-card{ position:static; }
+    nav.wrap, main.wrap{ padding-left:20px; padding-right:20px; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="wrap">
+  <div class="brand">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="9" stroke="#4A2E7A" stroke-width="1.6"/>
+      <circle cx="12" cy="12" r="3" fill="#4A2E7A"/>
+    </svg>
+    cell&nbsp;boundary
+  </div>
+  <a class="back" href="index.html">← Back to overview</a>
+</nav>
+
+<main class="wrap">
+  <div class="blob b1"></div>
+  <div class="blob b2"></div>
+
+  <header class="intro">
+    <div class="eyebrow">Run a prediction</div>
+    <h1>Six measurements. One diagnosis.</h1>
+    <p>Each slider is a feature the model was trained on. Set the values from a real sample and submit — the model on the server scores it and returns a diagnosis.</p>
+  </header>
+
+  <div class="grid">
+    <form id="predict-form" action="{{url_for('datapoint')}}" method="post">
+
+      <div class="field">
+        <div class="field-head">
+          <div class="fname-row">
+            <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 12c2-4 4-4 5 0s3 4 5 0 3-4 5 0 3 4 5 0"/></svg>
+            <label for="smoothness_mean">smoothness_mean</label>
+          </div>
+          <span class="readout mono" id="smoothness_mean-val">0.096</span>
+        </div>
+        <div class="field-sub">Local variation in radius lengths</div>
+        <div class="slider-track"><input type="range" id="smoothness_mean" min="0.053" max="0.163" step="0.001" value="0.096" name="r"></div>
+        <div class="range-caps mono"><span>0.053</span><span>0.163</span></div>
+      </div>
+
+      <div class="field">
+        <div class="field-head">
+          <div class="fname-row">
+            <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg>
+            <label for="compactness_mean">compactness_mean</label>
+          </div>
+          <span class="readout mono" id="compactness_mean-val">0.104</span>
+        </div>
+        <div class="field-sub">perimeter² / area − 1.0</div>
+        <div class="slider-track"><input type="range" id="compactness_mean" min="0.019" max="0.345" step="0.001" value="0.104" name="cm"></div>
+        <div class="range-caps mono"><span>0.019</span><span>0.345</span></div>
+      </div>
+
+      <div class="field">
+        <div class="field-head">
+          <div class="fname-row">
+            <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8"/><path d="M12 4c1.5 3 1.5 5 0 8"/></svg>
+            <label for="concave_points_mean">concave points_mean</label>
+          </div>
+          <span class="readout mono" id="concave_points_mean-val">0.049</span>
+        </div>
+        <div class="field-sub">Number of concave portions of the contour</div>
+        <div class="slider-track"><input type="range" id="concave_points_mean" min="0" max="0.201" step="0.001" value="0.049" name="cpm"></div>
+        <div class="range-caps mono"><span>0.000</span><span>0.201</span></div>
+      </div>
+
+      <div class="field">
+        <div class="field-head">
+          <div class="fname-row">
+            <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v18"/><path d="M12 7l6 5-6 5"/><path d="M12 7l-6 5 6 5" opacity="0.5"/></svg>
+            <label for="symmetry_mean">symmetry_mean</label>
+          </div>
+          <span class="readout mono" id="symmetry_mean-val">0.181</span>
+        </div>
+        <div class="field-sub">Symmetry of the nucleus contour</div>
+        <div class="slider-track"><input type="range" id="symmetry_mean" min="0.106" max="0.304" step="0.001" value="0.181" name="sm"></div>
+        <div class="range-caps mono"><span>0.106</span><span>0.304</span></div>
+      </div>
+
+      <div class="field">
+        <div class="field-head">
+          <div class="fname-row">
+            <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 20 L10 20 L10 14 L14 14 L14 10 L18 10 L18 4"/></svg>
+            <label for="fractal_dimension_mean">fractal_dimension_mean</label>
+          </div>
+          <span class="readout mono" id="fractal_dimension_mean-val">0.063</span>
+        </div>
+        <div class="field-sub">"Coastline approximation" − 1</div>
+        <div class="slider-track"><input type="range" id="fractal_dimension_mean" min="0.05" max="0.097" step="0.0005" value="0.063" name="fractal"></div>
+        <div class="range-caps mono"><span>0.050</span><span>0.097</span></div>
+      </div>
+
+      <div class="field">
+        <div class="field-head">
+          <div class="fname-row">
+            <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3v18"/><path d="M12 7l7 5-7 5"/><path d="M12 7l-7 5 7 5" opacity="0.5"/></svg>
+            <label for="symmetry_worst">symmetry_worst</label>
+          </div>
+          <span class="readout mono" id="symmetry_worst-val">0.290</span>
+        </div>
+        <div class="field-sub">Largest symmetry value across the nucleus</div>
+        <div class="slider-track"><input type="range" id="symmetry_worst" min="0.156" max="0.664" step="0.001" value="0.290" name="sw"></div>
+        <div class="range-caps mono"><span>0.156</span><span>0.664</span></div>
+      </div>
+
+      <button type="submit" class="btn">Score this nucleus</button>
+    </form>
+
+    <div class="visual-card">
+      <div class="visual-head">
+        <span class="eyebrow" style="margin:0;">Diagnosis</span>
+        <span class="mono">from the trained model</span>
+      </div>
+
+      {% if result is not none %}
+        <div class="diagnosis-icon">
+          {% if result==1 %}
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg>
+          {% else %}
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9"/></svg>
+          {% endif %}
+        </div>
+        <div class="diagnosis-value {% if result==1  %}malignant{% elif result==0  %}benign{% else %}neutral{% endif %}">
+          {{ 'Malignant' if result == 1 else 'Benign' }}
+        </div>
+        <div class="diagnosis-caption">Based on the six values submitted above.</div>
+      {% else %}
+        <div class="diagnosis-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9" stroke-dasharray="3 3"/></svg>
+        </div>
+        <div class="diagnosis-empty">Set the six values and submit to see a diagnosis here.</div>
+      {% endif %}
+
+      <div class="disclaimer-note">
+        This is a portfolio project trained on the Breast Cancer Wisconsin dataset. It is not a certified diagnostic tool.
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+  const ids = ["smoothness_mean","compactness_mean","concave_points_mean","symmetry_mean","fractal_dimension_mean","symmetry_worst"];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    const valEl = document.getElementById(id + "-val");
+    el.addEventListener("input", () => {
+      valEl.textContent = parseFloat(el.value).toFixed(id === "fractal_dimension_mean" ? 4 : 3);
+    });
+  });
+</script>
+
+</body>
+</html>

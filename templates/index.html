@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cell Boundary — Breast Cancer Diagnostic Model</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#FBFAF8;
+    --ink:#1C1B2A;
+    --ink-soft:#5B596E;
+    --violet:#4A2E7A;
+    --violet-2:#8B5FBF;
+    --violet-tint:#EFE9F7;
+    --rose:#D9776B;
+    --teal:#2F6F62;
+    --teal-tint:#E4F1EC;
+    --coral:#C1543F;
+    --coral-tint:#FAEAE6;
+    --line: rgba(28,27,42,0.10);
+    --glass: rgba(255,255,255,0.6);
+    --glass-strong: rgba(255,255,255,0.78);
+    --radius: 16px;
+  }
+  *{ box-sizing:border-box; }
+  html{ scroll-behavior:smooth; }
+  body{
+    margin:0; color:var(--ink); font-family:'IBM Plex Sans', sans-serif;
+    -webkit-font-smoothing:antialiased; background:var(--paper); position:relative;
+  }
+  body::before{
+    content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
+    background:
+      radial-gradient(circle at 12% 8%,  rgba(74,46,122,0.16), transparent 38%),
+      radial-gradient(circle at 88% 12%, rgba(217,119,107,0.14), transparent 42%),
+      radial-gradient(circle at 78% 88%, rgba(47,111,98,0.12), transparent 42%),
+      radial-gradient(circle at 15% 92%, rgba(193,84,63,0.10), transparent 38%),
+      repeating-radial-gradient(circle at 0 0, rgba(28,27,42,0.045) 0 1px, transparent 1px 26px),
+      var(--paper);
+  }
+  h1,h2,h3{ font-family:'Newsreader', serif; font-weight:600; margin:0; letter-spacing:-0.01em; }
+  .mono{ font-family:'IBM Plex Mono', monospace; }
+  a{ color:inherit; }
+  img,svg{ display:block; max-width:100%; }
+  :focus-visible{ outline:2px solid var(--violet); outline-offset:3px; }
+  .wrap{ max-width:1200px; margin:0 auto; padding:0 32px; }
+
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:0.14em;
+    text-transform:uppercase; color:var(--violet); display:inline-flex; align-items:center; gap:8px;
+  }
+  .eyebrow::before{ content:""; width:16px; height:1px; background:var(--violet); display:inline-block; }
+
+  nav.wrap{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:26px 32px; position:sticky; top:0; z-index:20;
+    backdrop-filter:blur(14px); background:rgba(251,250,248,0.72);
+    border-bottom:1px solid var(--line);
+  }
+  .brand{ display:flex; align-items:center; gap:10px; font-family:'IBM Plex Mono',monospace; font-weight:500; font-size:15px; }
+  .nav-links{ display:flex; gap:30px; font-size:14px; color:var(--ink-soft); }
+  .nav-links a{ text-decoration:none; transition:color .15s ease; }
+  .nav-links a:hover{ color:var(--violet); }
+  .nav-cta{
+    font-size:13.5px; font-weight:500; padding:9px 16px; border-radius:100px;
+    background:linear-gradient(135deg, var(--violet), var(--violet-2)); color:#fff;
+    text-decoration:none; box-shadow:0 6px 18px rgba(74,46,122,0.28);
+  }
+
+  .hero{ padding:76px 0 100px; position:relative; overflow:hidden; }
+  .blob{ position:absolute; filter:blur(50px); opacity:.5; animation:float 14s ease-in-out infinite; }
+  .blob.b1{ width:340px; height:340px; top:-120px; left:-80px; background:radial-gradient(circle, var(--violet-2), transparent 70%); }
+  .blob.b2{ width:300px; height:300px; bottom:-140px; right:-60px; background:radial-gradient(circle, var(--rose), transparent 70%); animation-delay:-6s; }
+  @keyframes float{ 0%,100%{ transform:translate(0,0) scale(1);} 50%{ transform:translate(20px,-24px) scale(1.06);} }
+  @media (prefers-reduced-motion:reduce){ .blob{ animation:none; } }
+
+  .hero-grid{ display:grid; grid-template-columns:1.05fr 0.95fr; gap:60px; align-items:center; position:relative; z-index:1; }
+  .badges{ display:flex; gap:10px; flex-wrap:wrap; margin-bottom:22px; }
+  .badge{
+    font-family:'IBM Plex Mono',monospace; font-size:11.5px; padding:6px 12px; border-radius:100px;
+    background:var(--glass); border:1px solid var(--line); color:var(--ink-soft);
+  }
+  .hero h1{ font-size:clamp(36px, 4.8vw, 62px); line-height:1.05; }
+  .hero h1 .grad{
+    background:linear-gradient(120deg, var(--violet), var(--violet-2) 60%, var(--rose));
+    -webkit-background-clip:text; background-clip:text; color:transparent; font-style:italic;
+  }
+  .hero p.lede{ font-size:17.5px; line-height:1.65; color:var(--ink-soft); max-width:48ch; margin-top:22px; }
+  .cta-row{ display:flex; gap:14px; margin-top:34px; flex-wrap:wrap; }
+  .btn{
+    font-family:'IBM Plex Sans', sans-serif; font-weight:500; font-size:15px;
+    padding:14px 24px; border-radius:100px; border:1px solid transparent; cursor:pointer;
+    text-decoration:none; display:inline-flex; align-items:center; gap:8px;
+    transition:transform .18s ease, box-shadow .18s ease;
+  }
+  .btn-primary{
+    background:linear-gradient(135deg, var(--violet), var(--violet-2)); color:#fff;
+    box-shadow:0 10px 26px rgba(74,46,122,0.32);
+  }
+  .btn-primary:hover{ transform:translateY(-2px); box-shadow:0 14px 30px rgba(74,46,122,0.4); }
+  .btn-ghost{ background:var(--glass); border-color:var(--line); color:var(--ink); }
+  .btn-ghost:hover{ border-color:var(--violet); color:var(--violet); transform:translateY(-2px); }
+
+  .slide-card{
+    background:var(--glass); backdrop-filter:blur(16px); border:1px solid rgba(255,255,255,0.7);
+    border-radius:var(--radius); box-shadow:0 20px 50px rgba(28,27,42,0.08);
+    position:relative;
+  }
+  .slide-label{
+    position:absolute; top:-14px; left:22px; background:#fff; border:1px dashed var(--violet);
+    color:var(--violet); font-family:'IBM Plex Mono',monospace; font-size:10.5px; padding:4px 10px;
+    border-radius:5px; transform:rotate(-2deg); box-shadow:0 4px 10px rgba(28,27,42,0.08);
+  }
+  .scatter-card{ padding:28px 24px 20px; }
+  .scatter-head{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px; }
+  .scatter-head .mono{ font-size:11px; color:var(--ink-soft); }
+  .legend{ display:flex; gap:18px; font-size:12px; color:var(--ink-soft); margin-top:12px; flex-wrap:wrap; }
+  .legend span{ display:inline-flex; align-items:center; gap:6px; }
+  .dot{ width:9px; height:9px; border-radius:50%; display:inline-block; }
+  .dot.benign{ background:var(--teal); box-shadow:0 0 0 4px var(--teal-tint); }
+  .dot.malignant{ background:var(--coral); box-shadow:0 0 0 4px var(--coral-tint); }
+
+  .pt{ opacity:0; transform:scale(0.3); transform-origin:center; animation:pop .55s cubic-bezier(.2,.8,.2,1) forwards; }
+  .boundary{ stroke-dasharray:340; stroke-dashoffset:340; animation:draw 1.2s ease forwards .3s; }
+  @keyframes pop{ to{ opacity:1; transform:scale(1); } }
+  @keyframes draw{ to{ stroke-dashoffset:0; } }
+  @media (prefers-reduced-motion: reduce){ .pt, .boundary{ animation:none !important; opacity:1; transform:none; stroke-dashoffset:0; } }
+
+  section{ padding:88px 0; position:relative; }
+  .section-head{ max-width:64ch; margin-bottom:48px; }
+  .section-head h2{ font-size:clamp(28px,3.2vw,38px); margin-top:12px; }
+  .section-head p{ color:var(--ink-soft); font-size:15.5px; line-height:1.65; margin-top:14px; }
+
+  .steps{ display:grid; grid-template-columns:repeat(3,1fr); gap:28px; position:relative; }
+  .steps::before{
+    content:""; position:absolute; top:34px; left:8%; right:8%; height:1px;
+    background:linear-gradient(90deg, transparent, var(--line) 15%, var(--line) 85%, transparent);
+  }
+  .step{ position:relative; padding-top:8px; }
+  .step .num{
+    width:52px; height:52px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    background:var(--glass-strong); border:1px solid var(--line); font-family:'IBM Plex Mono',monospace;
+    font-size:14px; color:var(--violet); margin-bottom:18px; position:relative; z-index:1;
+    box-shadow:0 8px 20px rgba(28,27,42,0.06);
+  }
+  .step h3{ font-size:20px; }
+  .step p{ color:var(--ink-soft); font-size:14.5px; line-height:1.65; margin-top:10px; }
+
+  .feature-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
+  .feature-card{
+    background:var(--glass); border:1px solid var(--line); border-radius:14px; padding:22px;
+    position:relative; overflow:hidden; transition:transform .2s ease, box-shadow .2s ease;
+  }
+  .feature-card::before{
+    content:""; position:absolute; top:0; left:0; right:0; height:3px;
+    background:linear-gradient(90deg, var(--violet), var(--violet-2));
+  }
+  .feature-card:hover{ transform:translateY(-4px); box-shadow:0 16px 34px rgba(28,27,42,0.1); }
+  .feature-icon{ width:34px; height:34px; color:var(--violet); margin-bottom:14px; }
+  .feature-card .fname{ font-family:'IBM Plex Mono',monospace; font-size:14px; color:var(--ink); display:block; }
+  .feature-card .fdesc{ font-size:13.5px; color:var(--ink-soft); margin-top:8px; line-height:1.55; }
+  .feature-card .frange{ font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:var(--violet); margin-top:12px; display:block; }
+
+  .stat-strip{ display:grid; grid-template-columns:repeat(4,1fr); gap:20px; }
+  .stat{ background:var(--glass); border:1px solid var(--line); border-radius:14px; padding:28px 22px; text-align:left; }
+  .stat .val{ font-family:'IBM Plex Mono', monospace; font-size:32px; background:linear-gradient(120deg, var(--violet), var(--violet-2)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .stat .label{ font-size:12.5px; color:var(--ink-soft); margin-top:8px; }
+
+  footer{ border-top:1px solid var(--line); padding:40px 0 52px; }
+  .disclaimer{
+    background:var(--coral-tint); border:1px solid rgba(193,84,63,0.25); border-radius:12px;
+    padding:18px 20px; font-size:13.5px; color:#7a3527; line-height:1.6; margin-bottom:28px;
+  }
+  .foot-row{ display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; }
+  .foot-row .mono{ font-size:12px; color:var(--ink-soft); }
+  .stack{ display:flex; gap:16px; flex-wrap:wrap; font-size:12.5px; color:var(--ink-soft); }
+
+  @media (max-width: 900px){
+    .hero-grid{ grid-template-columns:1fr; }
+    .steps{ grid-template-columns:1fr; }
+    .steps::before{ display:none; }
+    .feature-grid{ grid-template-columns:1fr 1fr; }
+    .stat-strip{ grid-template-columns:1fr 1fr; }
+    .wrap{ padding:0 20px; }
+    nav.wrap{ padding:20px; }
+  }
+  @media (max-width:520px){ .feature-grid{ grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+
+<nav class="wrap">
+  <div class="brand">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="9" stroke="#4A2E7A" stroke-width="1.6"/>
+      <circle cx="12" cy="12" r="3" fill="#4A2E7A"/>
+    </svg>
+    cell&nbsp;boundary
+  </div>
+  <div class="nav-links">
+    <a href="#how">How it works</a>
+    <a href="#features">Input features</a>
+    <a href="#performance">Performance</a>
+  </div>
+  <a class="nav-cta" href="http://192.168.0.103:5000/predictdata">Try a prediction</a>
+</nav>
+
+<section class="hero">
+  <div class="blob b1"></div>
+  <div class="blob b2"></div>
+  <div class="wrap hero-grid">
+    <div>
+      <div class="badges">
+        <span class="badge">569 samples</span>
+        <span class="badge">Logistic regression</span>
+        <span class="badge">97.9% accuracy</span>
+      </div>
+      <div class="eyebrow">Breast Cancer Wisconsin · Diagnostic Model</div>
+      <h1 style="margin-top:14px;">Six measurements.<br>One <span class="grad">diagnosis boundary</span>.</h1>
+      <p class="lede">Smoothness, compactness, concave points, symmetry, and fractal dimension — the shape descriptors that turn a digitized cell nucleus into a probability of malignancy.</p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="predict.html">Try a prediction</a>
+        <a class="btn btn-ghost" href="#how">See how it works ↓</a>
+      </div>
+    </div>
+
+    <div class="slide-card scatter-card">
+      <div class="slide-label">SPECIMEN 05.13</div>
+      <div class="scatter-head">
+        <span class="mono">radius_mean vs. texture_mean</span>
+        <span class="mono">n = 569</span>
+      </div>
+      <svg viewBox="0 0 360 260" width="100%">
+        <line x1="30" y1="10" x2="30" y2="230" stroke="var(--line)" stroke-width="1"/>
+        <line x1="30" y1="230" x2="340" y2="230" stroke="var(--line)" stroke-width="1"/>
+        <line class="boundary" x1="55" y1="55" x2="300" y2="205" stroke="var(--violet)" stroke-width="1.8" stroke-dasharray="6 5"/>
+        <circle class="pt" cx="250" cy="70" r="5" fill="var(--teal)" style="animation-delay:.05s"/>
+        <circle class="pt" cx="280" cy="95" r="5" fill="var(--teal)" style="animation-delay:.1s"/>
+        <circle class="pt" cx="220" cy="90" r="5" fill="var(--teal)" style="animation-delay:.15s"/>
+        <circle class="pt" cx="300" cy="60" r="5" fill="var(--teal)" style="animation-delay:.2s"/>
+        <circle class="pt" cx="240" cy="115" r="5" fill="var(--teal)" style="animation-delay:.25s"/>
+        <circle class="pt" cx="310" cy="120" r="5" fill="var(--teal)" style="animation-delay:.3s"/>
+        <circle class="pt" cx="265" cy="45" r="5" fill="var(--teal)" style="animation-delay:.35s"/>
+        <circle class="pt" cx="200" cy="65" r="5" fill="var(--teal)" style="animation-delay:.4s"/>
+        <circle class="pt" cx="325" cy="140" r="5" fill="var(--teal)" style="animation-delay:.45s"/>
+        <circle class="pt" cx="290" cy="150" r="5" fill="var(--teal)" style="animation-delay:.5s"/>
+        <circle class="pt" cx="80" cy="140" r="5" fill="var(--coral)" style="animation-delay:.05s"/>
+        <circle class="pt" cx="110" cy="165" r="5" fill="var(--coral)" style="animation-delay:.1s"/>
+        <circle class="pt" cx="65" cy="180" r="5" fill="var(--coral)" style="animation-delay:.15s"/>
+        <circle class="pt" cx="130" cy="200" r="5" fill="var(--coral)" style="animation-delay:.2s"/>
+        <circle class="pt" cx="95" cy="205" r="5" fill="var(--coral)" style="animation-delay:.25s"/>
+        <circle class="pt" cx="150" cy="180" r="5" fill="var(--coral)" style="animation-delay:.3s"/>
+        <circle class="pt" cx="55" cy="120" r="5" fill="var(--coral)" style="animation-delay:.35s"/>
+        <circle class="pt" cx="170" cy="215" r="5" fill="var(--coral)" style="animation-delay:.4s"/>
+        <circle class="pt" cx="120" cy="130" r="5" fill="var(--coral)" style="animation-delay:.45s"/>
+        <circle class="pt" cx="75" cy="200" r="5" fill="var(--coral)" style="animation-delay:.5s"/>
+      </svg>
+      <div class="legend">
+        <span><span class="dot benign"></span>Benign</span>
+        <span><span class="dot malignant"></span>Malignant</span>
+        <span style="color:var(--violet);">– – – Decision boundary</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="how">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">Process</div>
+      <h2>From nucleus shape to a probability</h2>
+      <p>The model reads the same contour descriptors a pathologist would note from a digitized slide, scales them, and passes them through a trained logistic regression boundary.</p>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="num">01</div>
+        <h3>Describe the contour</h3>
+        <p>Smoothness, compactness, concave points, symmetry, and fractal dimension — five ways of describing how irregular the nucleus boundary is.</p>
+      </div>
+      <div class="step">
+        <div class="num">02</div>
+        <h3>Standardize and score</h3>
+        <p>Each value is scaled and passed through a logistic regression trained on correlation-filtered, multicollinearity-checked inputs.</p>
+      </div>
+      <div class="step">
+        <div class="num">03</div>
+        <h3>Read the probability</h3>
+        <p>The output is a probability of malignancy, not a verdict — a starting point for a conversation with a clinician, never a replacement for one.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="features">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">Input schema</div>
+      <h2>What the model reads from each nucleus</h2>
+      <p>Six contour and shape descriptors, each measured directly from the digitized fine needle aspirate.</p>
+    </div>
+    <div class="feature-grid">
+
+      <div class="feature-card">
+        <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 12c2-4 4-4 5 0s3 4 5 0 3-4 5 0 3 4 5 0"/></svg>
+        <span class="fname">smoothness_mean</span>
+        <p class="fdesc">Local variation in radius lengths along the boundary — how jittery the edge is, point to point.</p>
+        <span class="frange">0.053 – 0.163</span>
+      </div>
+
+      <div class="feature-card">
+        <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg>
+        <span class="fname">compactness_mean</span>
+        <p class="fdesc">perimeter² / area − 1.0 — how tightly the boundary wraps its enclosed area.</p>
+        <span class="frange">0.019 – 0.345</span>
+      </div>
+
+      <div class="feature-card">
+        <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8"/><path d="M12 4c1.5 3 1.5 5 0 8"/></svg>
+        <span class="fname">concave points_mean</span>
+        <p class="fdesc">Count of concave portions cut into the contour — sharper dents tend to track malignant samples.</p>
+        <span class="frange">0.000 – 0.201</span>
+      </div>
+
+      <div class="feature-card">
+        <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v18"/><path d="M12 7l6 5-6 5"/><path d="M12 7l-6 5 6 5" opacity="0.5"/></svg>
+        <span class="fname">symmetry_mean</span>
+        <p class="fdesc">How closely the two halves of the nucleus mirror each other across its longest axis.</p>
+        <span class="frange">0.106 – 0.304</span>
+      </div>
+
+      <div class="feature-card">
+        <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 20 L10 20 L10 14 L14 14 L14 10 L18 10 L18 4"/></svg>
+        <span class="fname">fractal_dimension_mean</span>
+        <p class="fdesc">"Coastline approximation" minus one — how much detail the boundary reveals as you zoom in.</p>
+        <span class="frange">0.050 – 0.097</span>
+      </div>
+
+      <div class="feature-card">
+        <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v18" stroke-width="2.2"/><path d="M12 7l7 5-7 5"/><path d="M12 7l-7 5 7 5" opacity="0.5"/></svg>
+        <span class="fname">symmetry_worst</span>
+        <p class="fdesc">The largest symmetry deviation found across the nucleus — its single most asymmetric reading.</p>
+        <span class="frange">0.156 – 0.664</span>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<section id="performance">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">Held-out test set</div>
+      <h2>How the model performs</h2>
+      <p>Logistic regression after multicollinearity-based feature selection and hyperparameter tuning.</p>
+    </div>
+    <div class="stat-strip">
+      <div class="stat"><div class="val">97.9%</div><div class="label">Overall accuracy</div></div>
+      <div class="stat"><div class="val">0.97</div><div class="label">Recall, malignant class</div></div>
+      <div class="stat"><div class="val">0.98</div><div class="label">Precision, malignant class</div></div>
+      <div class="stat"><div class="val">569</div><div class="label">Samples in dataset</div></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="disclaimer">
+      This is a portfolio and research project trained on the Breast Cancer Wisconsin (Diagnostic) dataset. It is not a certified diagnostic tool and should never replace evaluation by a qualified clinician.
+    </div>
+    <div class="foot-row">
+      <span class="mono">cell boundary — breast cancer wisconsin diagnostic model</span>
+      <div class="stack">
+        <span>Python</span><span>scikit-learn</span><span>Flask</span><span>Logistic Regression</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
